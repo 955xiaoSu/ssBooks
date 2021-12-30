@@ -7,7 +7,10 @@
 #include "library.h"
 using namespace std;
 
-library::library(){};
+library::library(){
+	name = "";
+	this_user = NULL;
+};
 
 library::library(string& name){
 	string tmp = name + "_books.db";

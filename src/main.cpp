@@ -1,5 +1,3 @@
-#pragma once
-
 #include<cstdio>
 #include<cstring>
 #include<iostream>
@@ -19,7 +17,7 @@ void opt_help(){
 
 	cout<<"Global Commands: "<<endl;
 	cout<<"  search\tSearch for a book"<<endl;
-	cout<<"  login\tLogin as a user/admin"<<endl;
+	cout<<"  login \tLogin as a user/admin"<<endl;
 
 	cout<<"User Commands: "<<endl;
 	cout<<"  borrow\tBorrow a book"<<endl;
@@ -147,7 +145,7 @@ void opt_login(){
 }
 
 void opt_borrow(){
-	if (!check_login) return;
+	if (!check_login()) return;
 	cout<<"Please input the name of the book you want to borrow: "<<endl;
 	string name;
 	who(); cin>>name;
@@ -156,7 +154,7 @@ void opt_borrow(){
 }
 
 void opt_return(){
-	if (!check_login) return;
+	if (!check_login()) return;
 	cout<<"Please input the name of the book you want to return: "<<endl;
 	string name;
 	who(); cin>>name;
@@ -165,7 +163,7 @@ void opt_return(){
 }
 
 void opt_change_pass(){
-	if (!check_login) return;
+	if (!check_login()) return;
 	string old_pass,new_pass,tmp;
 	cout<<"Please enter your old password: "<<endl;
 	who(); cin>>old_pass;
@@ -179,11 +177,12 @@ void opt_change_pass(){
 }
 
 void opt_list_records(){
-	if (!check_login) return;
+	if (!check_login()) return;
 	s.list_records();
 }
+
 void opt_logout(){
-	if (!check_login) return;
+	if (!check_login()) return;
 	s.user_logout();
 }
 
@@ -206,21 +205,55 @@ void opt_add_book(){
 	if (confirm == "yes") s.add_book(book(name,isbn,&author,cate1,cate2,cate3));
 	else cout<<"Not confirmed. Exit. "<<endl;
 }
+
 void opt_delete_book(){
 	if (!check_login() || !check_admin()) return;
+	string name;
+	cout<<"Please input the name of the book you want to delete: "<<endl;
+	who(); cin>>name;
+	if (s.del_book(s.search_book_by_name(name))) cout<<"Success! Book deleted successfully. "<<endl;
+	else cout<<"Failed. "<<endl;
 }
+
 void opt_add_user(){
 	if (!check_login() || !check_admin()) return;
+	string id;
+	cout<<"Please input the id of the new user: "<<endl;
+	who(); cin>>id;
+	if (s.add_user(user(id))) cout<<"Success! The password was set to '123456' by default. "<<endl;
+	else cout<<"Failed. "<<endl;
 }
+
 void opt_delete_user(){
 	if (!check_login() || !check_admin()) return;
+	string id;
+	cout<<"Please input the id of the user you want to delete: "<<endl;
+	who(); cin>>id;
+	if (s.del_user(s.search_user(id))) cout<<"Success! User deleted successfully. "<<endl;
+	else cout<<"Failed. "<<endl;
 }
+
 void opt_list_users(){
 	if (!check_login() || !check_admin()) return;
+	s.list_users();
 }
+
 void opt_change_user_pass(){
 	if (!check_login() || !check_admin()) return;
+	string id,new_pass;
+	cout<<"Please input the id of the user you want to change: "<<endl;
+	who(); cin>>id;
+	cout<<"Please input the new password: "<<endl;
+	who(); cin>>new_pass;
+	if (s.change_user_password(s.search_user(id),new_pass)) cout<<"Success! User password changed successfully. "<<endl;
+	else cout<<"Failed. "<<endl;
 }
+
 void opt_reset_user_pass(){
 	if (!check_login() || !check_admin()) return;
+	string id;
+	cout<<"Please input the id of the user you want to reset: "<<endl;
+	who(); cin>>id;
+	if (s.reset_user_password(s.search_user(id))) cout<<"Success! User password reseted successfully. "<<endl;
+	else cout<<"Failed. "<<endl;
 }
