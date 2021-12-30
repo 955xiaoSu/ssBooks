@@ -1,12 +1,11 @@
 #pragma once
-
-#include<iostream>
+#include<cstdio>
 #include<cstring>
+#include<iostream>
+#include<vector>
 #include<map>
-#include<set>
 #include "user.h"
 #include "book.h"
-
 using namespace std;
 
 class library{
@@ -21,9 +20,11 @@ class library{
 		map<string, user*> user_link;
 		map<string, book*> book_name_link;
 		map<string, book*> book_isbn_link;
-		map<string, set<string> > author_link;
+		map<string, vector<book*> > author_link;
 
 	public:
+		// 初始化，无参构造函数，不实际使用
+		library();
 		// 初始化，包含文件读入等
 		library(string&);
 		// 返回当前图书馆名
@@ -77,10 +78,6 @@ class library{
 		bool user_login(string&, string&);
 		// 用户退出
 		bool user_logout();
-		// 用户修改密码
-		// 参数：用户名，原密码，新密码
-		// 返回：是否成功
-		bool user_change_password(string&, string&, string&);
 		// 用户查询自己的借阅记录
 		bool list_records();
 

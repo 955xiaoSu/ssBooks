@@ -1,14 +1,13 @@
 #pragma once
-
-#include<iostream>
+#include<cstdio>
 #include<cstring>
+#include<iostream>
+#include<vector>
 #include<map>
-#include<set>
-#include "user.h"
-#include "book.h"
 #include "library.h"
-
 using namespace std;
+
+library::library(){};
 
 library::library(string& name){
 	string tmp = name + "_books.db";
@@ -29,9 +28,13 @@ library::library(string& name){
 	p = freopen(tmp.c_str(), "r", stdin);
 }
 
-string library::get_name(){return this->name;}
+string library::get_name(){
+	return this->name;
+}
 
-user* library::get_user(){return this->this_user;}
+user* library::get_user(){
+	return this->this_user;
+}
 
 // 图书查找部分
 // 用户组：所有
@@ -53,9 +56,9 @@ book* library::search_book_by_isbn(string& book_isbn){
 }
 
 void library::list_books_by_author(string& author_name){
-	set<string>* s = &author_link[author_name];
-	set<string>::iterator it;
-	for (it=s->begin(); it!=s->end(); it++) cout<<(*it)<<endl;
+	vector<book*>& s = author_link[author_name];
+	for (vector<book*>::iterator it=s.begin(); it!=s.end(); it++)
+		(*it)->print_info();
 }
 
 void library::list_books_by_cate(string& cate1, string& cate2, string& cate3, int page){
@@ -76,6 +79,7 @@ bool library::borrow_book(book* now){
 		cout<<"ERROR: Book already borrowed."<<endl;
 		return false;
 	}
+	this_user->books.push_back(now);
 	now->inlib = false;
 	records_borrow.push_back(make_pair(this_user, now));
 	return true;
@@ -88,8 +92,13 @@ bool library::return_book(book* now){
 		cout<<"ERROR: Book not borrowed."<<endl;
 		return false;
 	}
-	now->inlib = true;
-	records_return.push_back(make_pair(this_user, now));
+	vector<book*>& vec = this_user->books;
+	for (vector<book*>::iterator it=vec.begin(); it!=vec.end(); it++)
+		if ((*it) == now) {vec.erase(it); now->inlib = true; break;}
+	if (!now->inlib){
+		cout<<"ERROR: Book not borrowed by you."<<endl;
+		return false;
+	} else records_return.push_back(make_pair(this_user, now));
 	return true;
 }
 
@@ -97,26 +106,29 @@ bool library::return_book(book* now){
 // 用户组：管理员
 
 bool library::add_book(book now_obj){
-	if (this_user->group) {cout<<"ERROR: Access denied."<<endl; return false;}
-	if (book_isbn_link[now_obj.ISBN]){
+	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (book_isbn_link[now_obj.isbn]){
 		cout<<"ERROR: Book already exist."<<endl;
 		return false;
 	}
 	book* now = new book(now_obj);
 	book_name_link[now->name] = now;
-	book_isbn_link[now->ISBN] = now;
+	book_isbn_link[now->isbn] = now;
 	for (int i=0; i<(int)now->author.size(); i++)
-		author_link[now->author[i]].insert(now->name);
+		author_link[now->author[i]].push_back(now);
 	return true;
 }
 
 bool library::del_book(book* now){
-	if (this_user->group) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
 	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
 	book_name_link.erase(now->name);
-	book_isbn_link.erase(now->ISBN);
-	for (int i=0; i<(int)now->author.size(); i++)
-		author_link[now->author[i]].erase(now->name);
+	book_isbn_link.erase(now->isbn);
+	for (int i=0; i<(int)now->author.size(); i++){
+		vector<book*>& vec = author_link[now->author[i]];
+		for (vector<book*>::iterator it=vec.begin();it!=vec.end();it++)
+			if ((*it)->name == now->name) vec.erase(it);
+	}
 	delete now;
 	return true;
 }
@@ -125,22 +137,17 @@ bool library::del_book(book* now){
 // 用户组：用户（除了 login）
 
 bool library::user_login(string& username, string& password){
+	if (this_user) {cout<<"ERROR: You have already logged in. Please logout first. "<<endl; return false;}
     user* now = user_link[username];
-    if (password == now->passwd){this_user = now; return true;}
-    else return false;
+    if (now->check_password(password)) {this_user = now; return true;}
+	cout<<"ERROR: Invalid username or password. "<<endl;
+    return false;
 }
 
 bool library::user_logout(){
-	if (this_user == NULL) {cout<<"ERROR: Please log in first."<<endl; return false;}
+	if (this_user == NULL) {cout<<"ERROR: Please log in first. "<<endl; return false;}
     this_user = NULL;
 	return true;
-}
-
-bool library::user_change_password(string& username, string& password, string& new_pass){
-	if (this_user == NULL) {cout<<"ERROR: Please log in first."<<endl; return false;}
-    user* now = user_link[username];
-    if(password==now->passwd){now->passwd = new_pass; return true;}
-    else return false;
 }
 
 #define v1 records_borrow
@@ -162,43 +169,43 @@ bool library::list_records(){
 // 权限：管理员
 
 user* library::search_user(string& username){
-	if (this_user->group) {cout<<"ERROR: Access denied."<<endl; return NULL;}
+	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return NULL;}
 	return user_link[username];
 }
 
 bool library::change_user_password(user* now, string& new_password){
-	if (this_user->group) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
 	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
-	now->passwd = new_password;
+	now->change_password(new_password);
 	return true;
 }
 
 bool library::reset_user_password(user* now){
-	if (this_user->group) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
 	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
-	now->passwd = "123456";
+	now->reset_password();
 	return true;
 }
 
 bool library::list_users(){
-	if (this_user->group) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
 	for (map<string, user* >::iterator it=user_link.begin(); it!=user_link.end(); it++)
 		cout<<it->first<<endl;
 	return true;
 }
 
 bool library::add_user(user now_obj){
-	if (this_user->group) {cout<<"ERROR: Access denied."<<endl; return false;}
-	if (user_link[now_obj.id]) {cout<<"ERROR: User already exist."<<endl; return false;}
+	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (user_link[now_obj.get_id()]) {cout<<"ERROR: User already exist."<<endl; return false;}
 	user* now = new user(now_obj);
-	user_link[now->id] = now;
+	user_link[now->get_id()] = now;
 	return true;
 }
 
 bool library::del_user(user* now){
-	if (this_user->group) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
 	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
-	user_link.erase(now->id);
+	user_link.erase(now->get_id());
 	delete now;
 	return true;
 }
