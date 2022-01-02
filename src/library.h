@@ -29,7 +29,7 @@ class library{
 		library();
 		// 初始化，包含文件读入等
 		// 参数：图书馆的名称，也是文件名
-		library(string&);
+		library(const string&);
 		// 析构函数，包含文件保存等
 		~library();
 		// 取当前图书馆名
@@ -47,20 +47,20 @@ class library{
 		// 根据书名查找图书
 		// 参数：图书名
 		// 返回：书的指针
-		book* search_book_by_name(string&);
+		book* search_book_by_name(const string&);
 		// 根据 ISBN 查找图书
 		// 参数：图书 ISBN
 		// 返回：书的指针
-		book* search_book_by_isbn(string&);
+		book* search_book_by_isbn(const string&);
 		// 模糊查找，根据作者列出图书
 		// 参数：作者名称
 		// 返回：是否有结果
-		bool list_books_by_author(string&);
+		bool list_books_by_author(const string&);
 		// 模糊查找，根据分类列出图书
 		// 参数：一级分类、二级分类、三级分类、页码（每页 page_size 本书，常量在 library.cpp 中定义）
 		//   对应分类如果不提供，用空字符串代替
 		// 返回：是否有结果
-		bool list_books_by_cate(string&, string&, string&, int);
+		bool list_books_by_cate(const string&, const string&, const string&, int);
 
 		// 图书借阅部分
 		// 用户组：用户
@@ -92,7 +92,7 @@ class library{
 		// 用户登录
 		// 参数：用户名，密码
 		// 返回：是否成功
-		bool user_login(string&, string&);
+		bool user_login(const string&, const string&);
 		// 用户退出
 		// 参数：无
 		// 返回：是否成功
