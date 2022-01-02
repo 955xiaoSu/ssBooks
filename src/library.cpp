@@ -4,31 +4,224 @@
 #include<iostream>
 #include<vector>
 #include<map>
+#include<fstream>
+#include<sstream>
 #include "library.h"
 using namespace std;
 
 library::library(){
 	name = "";
 	this_user = NULL;
-};
+}
 
-library::library(string& name){
-	string tmp = name + "_books.db";
-	FILE *p = freopen(tmp.c_str() , "r", stdin);
-	string now; cin>>now;
-	while (now[0] != EOF){
-		string passwd_hash; cin>>passwd_hash;
-		int group; cin>>group;
-		user_link[now] = new user(now,passwd_hash,group);
-		cin>>now;
+// 擦除字符串函数，删除 s1 中的 s2 子串
+// 参数：待操作的字符串（引用），要擦除的子串
+void string_erase(string& s1, string& s2){
+	int pos = s1.find(s2);
+	if (pos!=string::npos) s1.erase(pos, s2.length());
+}
+
+// “清洗”字符串函数
+// 关于换行符问题：Windows 中一个换行有两个字符，分别是换行符 10 和回车符 13
+//   而 Unix 系统中换行只有换行符 10，也认为 \n 就是 10
+//   给出的数据是 Windows 中生成的，存在回车符处于 getline 得到的字符串尾部
+//   所以需要 wash 一下 :(
+// 参数：待清洗的字符串（引用）
+void wash(string &str){
+	if (str[(int)str.length()-1] == 13) str.erase((int)str.length()-1, 1);
+}
+
+// 数据库文件格式的说明
+// [books] - 书的信息，每条记录格式为：
+//   书名 ISBN 作者列表 分类列表
+// [users] - 用户信息，每条记录格式为：
+//   用户ID 密码 用户组编号 借阅列表
+// [records] - 借阅记录，每条记录格式为：
+//   用户ID 书IDBN
+// [records_return] - 隶属于借阅记录部分，归还记录，每条记录格式为：
+//   用户ID 书ISBN
+library::library(string& s){
+	loading = true;
+
+	name = s;
+	fstream fin;
+	string name_tmp = name + ".db";
+	fin.open(name_tmp.c_str(), ios::in);
+	if (!fin){
+		cout<<"No database file found. "<<endl;
+		cout<<"New library " + name + " created. "<<endl;
+		cout<<endl;
+		cout<<"Default admin user: "<<endl;
+		cout<<" ID: admin"<<endl;
+		cout<<" Password: 123456"<<endl;
+		string s1="admin",s2="123456";
+		add_user(user(s1,s2,0));
+		return;
+	} else {
+		cout<<"Loading file " + name_tmp<<" ... "<<endl;
 	}
-	fclose(p);
 
-	tmp = name + "_users.db";
-	p = freopen(tmp.c_str(), "r", stdin);
+	cout<<"Loading books..."<<endl;
+	string tmp;
 
-	tmp = name + "_records.db";
-	p = freopen(tmp.c_str(), "r", stdin);
+	getline(fin, tmp); wash(tmp);
+	if (tmp != "[books]"){
+		cout<<"ERROR: broken file! "<<endl;
+		exit(1);
+	}
+	getline(fin, tmp);
+	while (tmp != "[users]" && !fin.eof()){
+		stringstream ss(tmp);
+
+		string name, isbn;
+		vector<string> vec; vec.clear();
+		string cate1,cate2,cate3;
+
+		string authors;
+		string cates;
+
+		getline(ss, name, ' ');
+		getline(ss, isbn, ' ');
+		getline(ss, authors, ' ');
+		getline(ss, cates, ' ');
+
+		// 处理作者
+		// 一个作者集合字符串分为两种情况：翻译书和国内书
+		// 对于翻译书，考虑 作者,作者,作者;译者,译者 的格式，末尾可能有 译 等译 [等]译 等后缀
+		// 对于国内书，考虑 作者,作者,作者 的格式
+		ss = stringstream(authors);
+		if (authors.find(';') != string::npos){ // 分为国外作者和国内译者
+			string writers,transers;
+			getline(ss, writers, ';');
+			getline(ss, transers, '@');
+
+			string now_name;
+			ss = stringstream(writers);
+			while (!ss.eof() && getline(ss, now_name, ',')) vec.push_back(now_name);
+			ss = stringstream(transers);
+			while (!ss.eof() && getline(ss, now_name, ',')) vec.push_back(now_name);
+
+			// 处理乱七八糟的格式问题
+			string& last_name = vec[(int)vec.size()-1];
+			string tmp_chinese = "等译";
+			string_erase(last_name, tmp_chinese);
+			tmp_chinese = "[等]译";
+			string_erase(last_name, tmp_chinese);
+			tmp_chinese = "译";
+			string_erase(last_name, tmp_chinese);
+		} else { // 只有作者没有译者
+			string now_name;
+			while (getline(ss, now_name, ',')) vec.push_back(now_name);
+		}
+
+		// 处理分类
+		// 格式比较混乱
+		// 考虑第一个大写字母为一级分类，之后到 / 符号之前为二级分类，之后为三级分类
+		cate1 = cates[0]; cates.erase(0, 1);
+		ss = stringstream(cates);
+		getline(ss, cate2, '/');
+		getline(ss, cate3, '@');
+
+		add_book(book(name, isbn, vec, cate1, cate2, cate3));
+
+		getline(fin, tmp);
+	}
+
+	cout<<"Loading users..."<<endl;
+	if (!fin.eof()) getline(fin, tmp);
+	if (!fin.eof() && tmp=="[users]"){
+		while (tmp!="[records]" && !fin.eof()){
+			stringstream ss(tmp);
+			string id, passwd, group, user_books;
+			getline(ss, id, ' ');
+			getline(ss, passwd, ' ');
+			getline(ss, group, ' ');
+			user* now_user = add_user(user(id, passwd, (int)(group=="1")));
+
+			getline(ss, user_books, '@');
+			ss = stringstream(user_books);
+			while (!ss.eof()){
+				string now_book_isbn;
+				getline(ss, now_book_isbn, ',');
+				book* now_book = search_book_by_isbn(now_book_isbn);
+				now_book->borrow();
+				now_user->get_books()->push_back(now_book);
+			}
+
+			getline(fin, tmp);
+		}
+	}
+
+	cout<<"Loading records..."<<endl;
+	if (!fin.eof() && tmp!="[records]") getline(fin, tmp);
+	if (!fin.eof() && tmp=="[records]"){
+		bool flag=false;
+		while (!fin.eof()){
+			if (tmp=="[records_return]") {flag=true;continue;}
+			stringstream ss(tmp);
+			string user,isbn;
+			getline(ss, user, ' ');
+			getline(ss, isbn, ' ');
+			if (!flag) records_borrow.push_back(make_pair(search_user(user), search_book_by_isbn(isbn)));
+			else records_return.push_back(make_pair(search_user(user), search_book_by_isbn(isbn)));
+
+			getline(fin, tmp);
+		}
+	}
+
+	fin.close();
+	cout<<"Loading finish. "<<endl;
+
+	this_user = NULL;
+	loading = false;
+}
+
+library::~library(){
+	cout<<"Saving your file... "<<endl;
+	fstream fout;
+	string name_tmp = name + ".db";
+	fout.open(name_tmp.c_str(), ios::out | ios::trunc);
+	if (!fout){
+		cout<<"No database fin found. "<<endl;
+		cout<<"New library " + name + " created. "<<endl;
+	} else {
+		cout<<"Saving to file " + name_tmp<<". "<<endl;
+	}
+
+	cout<<"Saving books... "<<endl;
+	fout<<"[books]"<<endl;
+	for (map<string, book*>::iterator it=book_name_link.begin(); it!=book_name_link.end(); it++){
+		fout << it->first << it->second->get_isbn();
+		vector<string>& vec = *(it->second->get_authors());
+		for (int i=0; i<(int)vec.size(); i++){
+			fout<<vec[i];
+			if (i!=(int)vec.size()-1) fout<<",";
+		}
+		fout << " " << it->second->get_cate1() << it->second->get_cate2() << "/" << it->second->get_cate3() << endl;
+		delete (it->second);
+	}
+
+	cout<<"Saving users... "<<endl;
+	fout<<"[users]"<<endl;
+	for (map<string, user*>::iterator it=user_link.begin(); it!=user_link.end(); it++){
+		fout<<it->first<<" "<<it->second->get_passwd()<<" "<<it->second->get_group();
+		vector<book*>& vec = *(it->second->get_books());
+		for (int i=0; i<(int)vec.size(); i++){
+			fout << vec[i]->get_isbn();
+			if (i!=(int)vec.size()-1) fout<<",";
+		}
+		delete it->second;
+	}
+
+	cout<<"Saving records... "<<endl;
+	fout<<"[records]"<<endl;
+	for (vector<pair<user*, book* > >::iterator it=records_borrow.begin(); it!=records_borrow.end(); it++)
+		fout<<it->first->get_id()<<" "<<it->second->get_isbn()<<endl;
+	fout<<"[records_return]"<<endl;
+	for (vector<pair<user*, book* > >::iterator it=records_return.begin(); it!=records_return.end(); it++)
+		fout<<it->first->get_id()<<" "<<it->second->get_isbn()<<endl;
+
+	cout<<"Successfully saved the database. "<<endl;
 }
 
 string library::get_name(){
@@ -58,83 +251,105 @@ book* library::search_book_by_isbn(string& book_isbn){
 	return book_isbn_link[book_isbn];
 }
 
-void library::list_books_by_author(string& author_name){
+bool library::list_books_by_author(string& author_name){
+	bool ret=false;
 	vector<book*>& s = author_link[author_name];
 	for (vector<book*>::iterator it=s.begin(); it!=s.end(); it++)
-		(*it)->print_info();
+		(*it)->print_info(),ret=true;
+	return ret;
 }
 
-void library::list_books_by_cate(string& cate1, string& cate2, string& cate3, int page){
+const int page_size = 50;
+
+bool library::list_books_by_cate(string& cate1, string& cate2, string& cate3, int page){
+	bool ret=false;
 	map<string, book*>::iterator it;
-	// for (it=book_name_link.begin(); it!=book_name_link.end(); it++){
-	// 	book* now = it->second;
-	// 	cout<<now->name<<endl;
-	// }
+	int count = 0;
+	for (it=book_name_link.begin(); it!=book_name_link.end(); it++){
+		book* now_book = it->second;
+		if (now_book->get_cate1() == cate1 && (cate2=="" || now_book->get_cate2()==cate2) && (cate3=="" || now_book->get_cate3()==cate3)){
+			count++;
+			if ((page-1)*page_size < count && count <= page*page_size) now_book->print_info(),ret=true;
+		}
+		if (count > page*page_size) break;
+	}
+	return ret;
 }
 
 // 图书借阅部分
 // 用户组：用户
 
-bool library::borrow_book(book* now){
-	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
+#define vb_it vector<book*>::iterator
+
+bool library::borrow_book(book* now_book){
+	if (now_book == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
 	if (this_user == NULL) {cout<<"ERROR: Please log in first."<<endl; return false;}
-	if (!now->inlib){
+	if (!now_book->borrow()){
 		cout<<"ERROR: Book already borrowed."<<endl;
 		return false;
 	}
-	this_user->books.push_back(now);
-	now->inlib = false;
-	records_borrow.push_back(make_pair(this_user, now));
+	this_user->get_books()->push_back(now_book);
+	records_borrow.push_back(make_pair(this_user, now_book));
 	return true;
 }
 
-bool library::return_book(book* now){
-	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
+bool library::return_book(book* now_book){
+	if (now_book == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
 	if (this_user == NULL) {cout<<"ERROR: Please log in first."<<endl; return false;}
-	if (now->inlib){
+	if (now_book->is_inlib()){
 		cout<<"ERROR: Book not borrowed."<<endl;
 		return false;
 	}
-	vector<book*>& vec = this_user->books;
-	for (vector<book*>::iterator it=vec.begin(); it!=vec.end(); it++)
-		if ((*it) == now) {vec.erase(it); now->inlib = true; break;}
-	if (!now->inlib){
+	vector<book*>& vec = *(this_user->get_books());
+	for (vb_it it=vec.begin(); it!=vec.end(); it++)
+		if ((*it) == now_book) {vec.erase(it); now_book->returnn(); break;}
+	if (!now_book->is_inlib()){
 		cout<<"ERROR: Book not borrowed by you."<<endl;
 		return false;
-	} else records_return.push_back(make_pair(this_user, now));
+	} else records_return.push_back(make_pair(this_user, now_book));
 	return true;
 }
+
+#undef vb_it
 
 // 图书管理部分
 // 用户组：管理员
 
-bool library::add_book(book now_obj){
-	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
-	if (book_isbn_link[now_obj.isbn]){
+#define vs_it vector<string>::iterator
+#define vb_it vector<book*>::iterator
+
+book* library::add_book(book now_book_obj){
+	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return NULL;}
+	if (book_isbn_link[now_book_obj.get_isbn()]){
 		cout<<"ERROR: Book already exist."<<endl;
-		return false;
+		return NULL;
 	}
-	book* now = new book(now_obj);
-	book_name_link[now->name] = now;
-	book_isbn_link[now->isbn] = now;
-	for (int i=0; i<(int)now->author.size(); i++)
-		author_link[now->author[i]].push_back(now);
+	book* now_book = new book(now_book_obj);
+	book_name_link[now_book->get_name()] = now_book;
+	book_isbn_link[now_book->get_isbn()] = now_book;
+	vector<string>* vec = now_book->get_authors();
+	for (vs_it it=vec->begin();it!=vec->end();it++)
+		author_link[*it].push_back(now_book);
+	return now_book;
+}
+
+bool library::del_book(book* now_book){
+	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (now_book == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
+	book_name_link.erase(now_book->get_name());
+	book_isbn_link.erase(now_book->get_isbn());
+	vector<string>* vec_a = now_book->get_authors();
+	for (vs_it it=vec_a->begin(); it!=vec_a->end(); it++){
+		vector<book*>& vec = author_link[*it];
+		for (vb_it itt=vec.begin(); itt!=vec.end(); itt++)
+			if ((*itt)->get_name() == now_book->get_name()) vec.erase(itt);
+	}
+	delete now_book;
 	return true;
 }
 
-bool library::del_book(book* now){
-	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
-	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
-	book_name_link.erase(now->name);
-	book_isbn_link.erase(now->isbn);
-	for (int i=0; i<(int)now->author.size(); i++){
-		vector<book*>& vec = author_link[now->author[i]];
-		for (vector<book*>::iterator it=vec.begin();it!=vec.end();it++)
-			if ((*it)->name == now->name) vec.erase(it);
-	}
-	delete now;
-	return true;
-}
+#undef vs_it
+#undef vb_it
 
 // 用户操作部分
 // 用户组：用户（除了 login）
@@ -159,10 +374,10 @@ bool library::list_records(){
 	if (this_user == NULL) {cout<<"ERROR: Please log in first."<<endl; return false;}
 	cout<<"Borrowed: "<<endl;
 	for (int i=0; i<(int)v1.size(); i++)
-		if (v1[i].first == this_user) cout<<v1[i].second->name<<endl;
+		if (v1[i].first == this_user) cout<<v1[i].second->get_name()<<endl;
 	cout<<"Returned: "<<endl;
 	for (int i=0; i<(int)v2.size(); i++)
-		if (v2[i].first == this_user) cout<<v2[i].second->name<<endl;
+		if (v2[i].first == this_user) cout<<v2[i].second->get_name()<<endl;
 	return true;
 }
 #undef v1
@@ -172,43 +387,43 @@ bool library::list_records(){
 // 权限：管理员
 
 user* library::search_user(string& username){
-	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return NULL;}
+	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return NULL;}
 	return user_link[username];
 }
 
-bool library::change_user_password(user* now, string& new_password){
-	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
-	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
-	now->change_password(new_password);
+bool library::change_user_password(user* now_user, string& new_password){
+	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (now_user == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
+	now_user->change_password(new_password);
 	return true;
 }
 
-bool library::reset_user_password(user* now){
-	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
-	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
-	now->reset_password();
+bool library::reset_user_password(user* now_user){
+	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (now_user == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
+	now_user->reset_password();
 	return true;
 }
 
 bool library::list_users(){
-	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
 	for (map<string, user* >::iterator it=user_link.begin(); it!=user_link.end(); it++)
 		cout<<it->first<<endl;
 	return true;
 }
 
-bool library::add_user(user now_obj){
-	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
-	if (user_link[now_obj.get_id()]) {cout<<"ERROR: User already exist."<<endl; return false;}
-	user* now = new user(now_obj);
-	user_link[now->get_id()] = now;
-	return true;
+user* library::add_user(user now_user_obj){
+	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return NULL;}
+	if (user_link[now_user_obj.get_id()]) {cout<<"ERROR: User already exist."<<endl; return NULL;}
+	user* now_user = new user(now_user_obj);
+	user_link[now_user->get_id()] = now_user;
+	return now_user;
 }
 
-bool library::del_user(user* now){
-	if (this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
-	if (now == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
-	user_link.erase(now->get_id());
-	delete now;
+bool library::del_user(user* now_user){
+	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
+	if (now_user == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
+	user_link.erase(now_user->get_id());
+	delete now_user;
 	return true;
 }

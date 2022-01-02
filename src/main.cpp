@@ -17,7 +17,8 @@ void opt_help(){
 
 	cout<<"Global Commands: "<<endl;
 	cout<<"  search\tSearch for a book"<<endl;
-	cout<<"  login \tLogin as a user/admin"<<endl;
+	cout<<"  login\tLogin as a user/admin"<<endl;
+	cout<<"  quit\tQuit the program"<<endl;
 
 	cout<<"User Commands: "<<endl;
 	cout<<"  borrow\tBorrow a book"<<endl;
@@ -55,6 +56,13 @@ void opt_reset_user_pass();
 
 int main(){
     cout<<"Welcome to ssBooks system! "<<endl;
+
+	cout<<"Please enter your library name: "<<endl;
+	string ss;
+	cout<<" > "; cin>>ss;
+	s = library(ss);
+
+	cout<<endl<<"Welcome to "<<s.get_name()<<" ! "<<endl;
 	cout<<"Type 'help' for help. "<<endl;
 
 	string opt;
@@ -64,6 +72,10 @@ int main(){
 
 		if (opt=="search") opt_search(); else
 		if (opt=="login") opt_login(); else
+		if (opt=="quit"){
+			cout<<"Bye~"<<endl;
+			return 0;
+		}
 
 		if (opt=="borrow") opt_borrow(); else
 		if (opt=="return") opt_return(); else
@@ -127,9 +139,34 @@ void opt_search(){
 		who(); cin>>opt;
 		s.list_books_by_author(opt);
 	} else if (opt=="catelogy"){
-		cout<<"Please input the catelogy (1~3 chars): "<<endl;
-		who(); cin>>opt;
-		// s.list_books_by_cate(opt);
+		string cate1,cate2,cate3;
+		cout<<"Please input level1 catelogy: "<<endl;
+		who(); cin>>cate1;
+		cout<<"Please input level2 catelogy, leave empty if you don't want: "<<endl;
+		who(); cin>>cate2;
+		cout<<"Please input level3 catelogy, leave empty if you don't want: "<<endl;
+		who(); cin>>cate3;
+		int now_page = 0;
+		for (;;){
+			bool now_have = s.list_books_by_cate(cate1, cate2, cate3, now_page);
+			if (!now_have) cout<<"No more books! "<<endl;
+			cout<<endl<<"Showing page "<<now_page+1<<". Input 'next'/'prev' or 'quit': ";
+
+			bool quit=false;
+			who(); cin>>opt;
+			for (;;){
+				if (opt=="next"){
+					if (!now_have) cout<<"Already the last page! "<<endl;
+					else {now_page++;break;}
+				} else if (opt=="prev"){
+					if (!now_page) cout<<"Already the first page! "<<endl;
+					else {now_page--;break;}
+				} else if (opt=="quit"){
+					quit=true;
+					break;
+				} else who(),cin>>opt;
+			}
+		}
 	} else {
 		cout<<"Invalid input. Exit."<<endl;
 	}
@@ -202,7 +239,7 @@ void opt_add_book(){
 	who(); //!!!
 	cout<<"Is that all right? Enter 'yes' to confirm. "<<endl;
 	who(); cin>>confirm;
-	if (confirm == "yes") s.add_book(book(name,isbn,&author,cate1,cate2,cate3));
+	if (confirm == "yes") s.add_book(book(name, isbn, author, cate1, cate2, cate3));
 	else cout<<"Not confirmed. Exit. "<<endl;
 }
 

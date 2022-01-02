@@ -13,7 +13,7 @@ user::user(string &id){
 	this->group = 0;
 }
 
-user::user(string &id, string &passwd, int &group){
+user::user(string &id, string &passwd, int group){
 	this->id = id;
 	this->passwd = passwd;
 	this->group = group;
@@ -25,6 +25,14 @@ int user::get_group(){
 
 string user::get_id(){
 	return this->id;
+}
+
+string user::get_passwd(){
+	return this->passwd;
+}
+
+vector<book*>* user::get_books(){
+	return &books;
 }
 
 bool user::check_password(string& pass){
