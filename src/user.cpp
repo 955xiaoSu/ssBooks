@@ -7,13 +7,13 @@
 #include "user.h"
 using namespace std;
 
-user::user(string &id){
+user::user(const string &id){
 	this->id = id;
 	this->passwd = "123456";
 	this->group = 0;
 }
 
-user::user(string &id, string &passwd, int group){
+user::user(const string &id, const string &passwd, int group){
 	this->id = id;
 	this->passwd = passwd;
 	this->group = group;
@@ -35,16 +35,16 @@ vector<book*>* user::get_books(){
 	return &books;
 }
 
-bool user::check_password(string& pass){
+bool user::check_password(const string& pass){
 	return this->passwd == pass;
 }
 
-bool user::change_password(string& old_pass, string& new_pass){
+bool user::change_password(const string& old_pass, const string& new_pass){
     if (old_pass == this->passwd) {this->passwd = new_pass; return true;}
     else return false;
 }
 
-bool user::change_password(string& new_pass){
+bool user::change_password(const string& new_pass){
 	this->passwd = new_pass;
 	return true;
 }
