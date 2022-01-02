@@ -12,7 +12,7 @@ book::book(){
     inlib = false;
 }
 
-book::book(string& names, string& isbns, vector<string> vec, string& c1, string& c2, string& c3){
+book::book(const string& names, const string& isbns, vector<string> vec, const string& c1, const string& c2, const string& c3){
 	name = names;
 	isbn = isbns;
 	author = vec;
