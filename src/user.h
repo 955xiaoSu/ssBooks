@@ -19,10 +19,10 @@ class user{
 	public:
 		// user 类的构造函数
 		// 参数：ID
-		user(string&);
+		user(const string&);
 		// user 类的全参构造函数
 		// 参数：ID，密码，用户组
-		user(string&, string&, int);
+		user(const string&, const string&, int);
 
 		// 取用户组
 		// 参数：无
@@ -44,17 +44,17 @@ class user{
 		// 验证密码
 		// 参数：输入的密码
 		// 返回：是否验证通过
-		bool check_password(string&);
+		bool check_password(const string&);
 
 		// 用户修改密码
 		// 参数：原密码，新密码
 		// 返回：是否成功
-		bool change_password(string&, string&);
+		bool change_password(const string&, const string&);
 
 		// 被管理员修改密码
 		// 参数：新密码
 		// 返回：是否成功（总是成功）
-		bool change_password(string&);
+		bool change_password(const string&);
 		// 被管理员重设密码
 		// 参数：无
 		// 返回：是否成功（总是成功）
