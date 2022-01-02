@@ -235,7 +235,7 @@ user* library::get_user(){
 // 图书查找部分
 // 用户组：所有
 
-book* library::search_book_by_name(string& book_name){
+book* library::search_book_by_name(const string& book_name){
 	if (!book_name_link[book_name]){
 		cout<<"ERROR: Book doesn't exist."<<endl;
 		return NULL;
@@ -243,7 +243,7 @@ book* library::search_book_by_name(string& book_name){
 	return book_name_link[book_name];
 }
 
-book* library::search_book_by_isbn(string& book_isbn){
+book* library::search_book_by_isbn(const string& book_isbn){
 	if (!book_isbn_link[book_isbn]){
 		cout<<"ERROR: Book doesn't exist."<<endl;
 		return NULL;
@@ -251,7 +251,7 @@ book* library::search_book_by_isbn(string& book_isbn){
 	return book_isbn_link[book_isbn];
 }
 
-bool library::list_books_by_author(string& author_name){
+bool library::list_books_by_author(const string& author_name){
 	bool ret=false;
 	vector<book*>& s = author_link[author_name];
 	for (vector<book*>::iterator it=s.begin(); it!=s.end(); it++)
@@ -261,7 +261,7 @@ bool library::list_books_by_author(string& author_name){
 
 const int page_size = 50;
 
-bool library::list_books_by_cate(string& cate1, string& cate2, string& cate3, int page){
+bool library::list_books_by_cate(const string& cate1, const string& cate2, const string& cate3, int page){
 	bool ret=false;
 	map<string, book*>::iterator it;
 	int count = 0;
@@ -354,7 +354,7 @@ bool library::del_book(book* now_book){
 // 用户操作部分
 // 用户组：用户（除了 login）
 
-bool library::user_login(string& username, string& password){
+bool library::user_login(const string& username, const string& password){
 	if (this_user) {cout<<"ERROR: You have already logged in. Please logout first. "<<endl; return false;}
     user* now = user_link[username];
     if (now->check_password(password)) {this_user = now; return true;}
@@ -386,12 +386,12 @@ bool library::list_records(){
 // 用户管理部分
 // 权限：管理员
 
-user* library::search_user(string& username){
+user* library::search_user(const string& username){
 	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return NULL;}
 	return user_link[username];
 }
 
-bool library::change_user_password(user* now_user, string& new_password){
+bool library::change_user_password(user* now_user, const string& new_password){
 	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
 	if (now_user == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
 	now_user->change_password(new_password);
