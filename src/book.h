@@ -19,7 +19,7 @@ class book{
         book();
         // book 类的全参构造函数
         // 参数：书名，ISBN，作者列表，一级分类，二级分类，三级分类
-        book(string&, string&, vector<string>, string&, string&, string&);
+        book(const string&, const string&, vector<string>, const string&, const string&, const string&);
 
         // 取信息部分
         // 取出各种私有成员
