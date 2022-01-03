@@ -12,13 +12,19 @@ using namespace std;
 library::library(){
 	name = "";
 	this_user = NULL;
+	records_borrow.clear();
+	records_return.clear();
+	user_link.clear();
+	book_name_link.clear();
+	book_isbn_link.clear();
+	author_link.clear();
 }
 
 // 擦除字符串函数，删除 s1 中的 s2 子串
 // 参数：待操作的字符串（引用），要擦除的子串
-void string_erase(string& s1, string& s2){
+void string_erase(string& s1, const string& s2){
 	int pos = s1.find(s2);
-	if (pos!=string::npos) s1.erase(pos, s2.length());
+	if (pos != (int)string::npos) s1.erase(pos, s2.length());
 }
 
 // “清洗”字符串函数
@@ -27,7 +33,7 @@ void string_erase(string& s1, string& s2){
 //   给出的数据是 Windows 中生成的，存在回车符处于 getline 得到的字符串尾部
 //   所以需要 wash 一下 :(
 // 参数：待清洗的字符串（引用）
-void wash(string &str){
+void wash(string& str){
 	if (str[(int)str.length()-1] == 13) str.erase((int)str.length()-1, 1);
 }
 
@@ -40,10 +46,17 @@ void wash(string &str){
 //   用户ID 书IDBN
 // [records_return] - 隶属于借阅记录部分，归还记录，每条记录格式为：
 //   用户ID 书ISBN
-library::library(string& s){
+library::library(const string& s){
+	name = s;
+	this_user = NULL;
+	records_borrow.clear();
+	records_return.clear();
+	user_link.clear();
+	book_name_link.clear();
+	book_isbn_link.clear();
+	author_link.clear();
 	loading = true;
 
-	name = s;
 	fstream fin;
 	string name_tmp = name + ".db";
 	fin.open(name_tmp.c_str(), ios::in);
@@ -191,7 +204,7 @@ library::~library(){
 	cout<<"Saving books... "<<endl;
 	fout<<"[books]"<<endl;
 	for (map<string, book*>::iterator it=book_name_link.begin(); it!=book_name_link.end(); it++){
-		fout << it->first << it->second->get_isbn();
+		fout << it->first << " " << it->second->get_isbn() << " ";
 		vector<string>& vec = *(it->second->get_authors());
 		for (int i=0; i<(int)vec.size(); i++){
 			fout<<vec[i];
@@ -261,7 +274,7 @@ bool library::list_books_by_author(const string& author_name){
 
 const int page_size = 50;
 
-bool library::list_books_by_cate(const string& cate1, const string& cate2, const string& cate3, int page){
+bool library::list_books_by_cate(const string& cate1, const string& cate2, const string& cate3, const int page){
 	bool ret=false;
 	map<string, book*>::iterator it;
 	int count = 0;

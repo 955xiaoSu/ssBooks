@@ -58,9 +58,10 @@ int main(){
     cout<<"Welcome to ssBooks system! "<<endl;
 
 	cout<<"Please enter your library name: "<<endl;
-	string ss;
-	cout<<" > "; cin>>ss;
-	s = library(ss);
+	string s_name;
+	cout<<" > "; cin>>s_name;
+	// 如果直接这么写，会产生一个 library 的临时变量，导致先调用一次读文件写文件，出现错误
+	s = library(s_name);
 
 	cout<<endl<<"Welcome to "<<s.get_name()<<" ! "<<endl;
 	cout<<"Type 'help' for help. "<<endl;

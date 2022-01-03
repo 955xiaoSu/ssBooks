@@ -60,7 +60,7 @@ class library{
 		// 参数：一级分类、二级分类、三级分类、页码（每页 page_size 本书，常量在 library.cpp 中定义）
 		//   对应分类如果不提供，用空字符串代替
 		// 返回：是否有结果
-		bool list_books_by_cate(const string&, const string&, const string&, int);
+		bool list_books_by_cate(const string&, const string&, const string&, const int);
 
 		// 图书借阅部分
 		// 用户组：用户
@@ -108,11 +108,11 @@ class library{
 		// 查询用户
 		// 参数：用户名
 		// 返回：指向该用户的指针
-		user* search_user(string&);
+		user* search_user(const string&);
 		// 修改用户密码
 		// 参数：用户指针，新的密码
 		// 返回：是否成功
-		bool change_user_password(user*, string&);
+		bool change_user_password(user*, const string&);
 		// 重设密码为 123456
 		// 参数：用户指针
 		// 返回：是否成功
