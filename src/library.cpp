@@ -82,7 +82,7 @@ library::library(const string& s){
 		cout<<"ERROR: broken file! "<<endl;
 		exit(1);
 	}
-	getline(fin, tmp);
+	getline(fin, tmp); wash(tmp);
 	while (tmp != "[users]" && !fin.eof()){
 		stringstream ss(tmp);
 
@@ -137,21 +137,25 @@ library::library(const string& s){
 
 		add_book(book(name, isbn, vec, cate1, cate2, cate3));
 
-		getline(fin, tmp);
+		getline(fin, tmp); wash(tmp);
 	}
 
 	cout<<"Loading users..."<<endl;
-	if (!fin.eof()) getline(fin, tmp);
 	if (!fin.eof() && tmp=="[users]"){
+		getline(fin, tmp); wash(tmp);
 		while (tmp!="[records]" && !fin.eof()){
+			if (tmp == "\n") break;
 			stringstream ss(tmp);
 			string id, passwd, group, user_books;
 			getline(ss, id, ' ');
 			getline(ss, passwd, ' ');
 			getline(ss, group, ' ');
 			user* now_user = add_user(user(id, passwd, (int)(group=="1")));
+			user_link[now_user->get_id()] = now_user;
 
+			// 处理这个用户借阅的书籍
 			getline(ss, user_books, '@');
+			if (user_books == "" || user_books == " "){getline(fin, tmp);wash(tmp);continue;}
 			ss = stringstream(user_books);
 			while (!ss.eof()){
 				string now_book_isbn;
@@ -161,16 +165,17 @@ library::library(const string& s){
 				now_user->get_books()->push_back(now_book);
 			}
 
-			getline(fin, tmp);
+			getline(fin, tmp); wash(tmp);
 		}
 	}
 
 	cout<<"Loading records..."<<endl;
-	if (!fin.eof() && tmp!="[records]") getline(fin, tmp);
 	if (!fin.eof() && tmp=="[records]"){
+		getline(fin, tmp); wash(tmp);
 		bool flag=false;
 		while (!fin.eof()){
-			if (tmp=="[records_return]") {flag=true;continue;}
+			if (tmp == "[records_return]") {flag=true;getline(fin, tmp);wash(tmp);continue;}
+			if (tmp == "\n") break;
 			stringstream ss(tmp);
 			string user,isbn;
 			getline(ss, user, ' ');
@@ -178,7 +183,7 @@ library::library(const string& s){
 			if (!flag) records_borrow.push_back(make_pair(search_user(user), search_book_by_isbn(isbn)));
 			else records_return.push_back(make_pair(search_user(user), search_book_by_isbn(isbn)));
 
-			getline(fin, tmp);
+			getline(fin, tmp); wash(tmp);
 		}
 	}
 
@@ -211,28 +216,37 @@ library::~library(){
 			if (i!=(int)vec.size()-1) fout<<",";
 		}
 		fout << " " << it->second->get_cate1() << it->second->get_cate2() << "/" << it->second->get_cate3() << endl;
-		delete (it->second);
 	}
 
 	cout<<"Saving users... "<<endl;
 	fout<<"[users]"<<endl;
+	// cout<<"[users]"<<endl;
 	for (map<string, user*>::iterator it=user_link.begin(); it!=user_link.end(); it++){
-		fout<<it->first<<" "<<it->second->get_passwd()<<" "<<it->second->get_group();
+		fout << it->first << " " << it->second->get_passwd() << " " << it->second->get_group() << " ";
+		// cout << it->first << " " << it->second->get_passwd() << " " << it->second->get_group() << " ";
 		vector<book*>& vec = *(it->second->get_books());
 		for (int i=0; i<(int)vec.size(); i++){
 			fout << vec[i]->get_isbn();
-			if (i!=(int)vec.size()-1) fout<<",";
+			// cout << vec[i]->get_isbn();
+			if (i != (int)vec.size()-1) fout<<",";
 		}
-		delete it->second;
+		fout<<endl;
+		// cout<<endl;
 	}
 
 	cout<<"Saving records... "<<endl;
 	fout<<"[records]"<<endl;
 	for (vector<pair<user*, book* > >::iterator it=records_borrow.begin(); it!=records_borrow.end(); it++)
-		fout<<it->first->get_id()<<" "<<it->second->get_isbn()<<endl;
+		fout << it->first->get_id() << " " << it->second->get_isbn() << endl;
 	fout<<"[records_return]"<<endl;
 	for (vector<pair<user*, book* > >::iterator it=records_return.begin(); it!=records_return.end(); it++)
-		fout<<it->first->get_id()<<" "<<it->second->get_isbn()<<endl;
+		fout << it->first->get_id() << " "<< it->second->get_isbn() << endl;
+
+	cout<<"Cleaning up..."<<endl;
+	for (map<string, book*>::iterator it=book_name_link.begin(); it!=book_name_link.end(); it++)
+		delete (it->second);
+	for (map<string, user*>::iterator it=user_link.begin(); it!=user_link.end(); it++)
+		delete it->second;
 
 	cout<<"Successfully saved the database. "<<endl;
 }
@@ -250,7 +264,7 @@ user* library::get_user(){
 
 book* library::search_book_by_name(const string& book_name){
 	if (!book_name_link[book_name]){
-		cout<<"ERROR: Book doesn't exist."<<endl;
+		cout<<"ERROR: Book "<<book_name<<" doesn't exist."<<endl;
 		return NULL;
 	}
 	return book_name_link[book_name];
@@ -258,7 +272,7 @@ book* library::search_book_by_name(const string& book_name){
 
 book* library::search_book_by_isbn(const string& book_isbn){
 	if (!book_isbn_link[book_isbn]){
-		cout<<"ERROR: Book doesn't exist."<<endl;
+		cout<<"ERROR: Book "<<book_isbn<<" doesn't exist."<<endl;
 		return NULL;
 	}
 	return book_isbn_link[book_isbn];
@@ -272,6 +286,7 @@ bool library::list_books_by_author(const string& author_name){
 	return ret;
 }
 
+// 每页的显示数量可以以此配置
 const int page_size = 50;
 
 bool library::list_books_by_cate(const string& cate1, const string& cate2, const string& cate3, const int page){
@@ -282,9 +297,9 @@ bool library::list_books_by_cate(const string& cate1, const string& cate2, const
 		book* now_book = it->second;
 		if (now_book->get_cate1() == cate1 && (cate2=="" || now_book->get_cate2()==cate2) && (cate3=="" || now_book->get_cate3()==cate3)){
 			count++;
-			if ((page-1)*page_size < count && count <= page*page_size) now_book->print_info(),ret=true;
+			if (page*page_size < count && count <= (page+1)*page_size) now_book->print_info(),ret=true;
 		}
-		if (count > page*page_size) break;
+		if (count > (page+1)*page_size) break;
 	}
 	return ret;
 }
@@ -334,14 +349,14 @@ bool library::return_book(book* now_book){
 book* library::add_book(book now_book_obj){
 	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return NULL;}
 	if (book_isbn_link[now_book_obj.get_isbn()]){
-		cout<<"ERROR: Book already exist."<<endl;
+		cout<<"ERROR: Book "<<now_book_obj.get_isbn()<<" already exist."<<endl;
 		return NULL;
 	}
 	book* now_book = new book(now_book_obj);
 	book_name_link[now_book->get_name()] = now_book;
 	book_isbn_link[now_book->get_isbn()] = now_book;
-	vector<string>* vec = now_book->get_authors();
-	for (vs_it it=vec->begin();it!=vec->end();it++)
+	vector<string>& vec = *(now_book->get_authors());
+	for (vs_it it=vec.begin(); it!=vec.end(); it++)
 		author_link[*it].push_back(now_book);
 	return now_book;
 }
@@ -351,8 +366,8 @@ bool library::del_book(book* now_book){
 	if (now_book == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
 	book_name_link.erase(now_book->get_name());
 	book_isbn_link.erase(now_book->get_isbn());
-	vector<string>* vec_a = now_book->get_authors();
-	for (vs_it it=vec_a->begin(); it!=vec_a->end(); it++){
+	vector<string>& vec_a = *(now_book->get_authors());
+	for (vs_it it=vec_a.begin(); it!=vec_a.end(); it++){
 		vector<book*>& vec = author_link[*it];
 		for (vb_it itt=vec.begin(); itt!=vec.end(); itt++)
 			if ((*itt)->get_name() == now_book->get_name()) vec.erase(itt);
@@ -370,8 +385,9 @@ bool library::del_book(book* now_book){
 bool library::user_login(const string& username, const string& password){
 	if (this_user) {cout<<"ERROR: You have already logged in. Please logout first. "<<endl; return false;}
     user* now = user_link[username];
+	if (!now){cout<<"ERROR: No such user. "<<endl; return false;}
     if (now->check_password(password)) {this_user = now; return true;}
-	cout<<"ERROR: Invalid username or password. "<<endl;
+	cout<<"ERROR: Wrong password. "<<endl;
     return false;
 }
 
@@ -421,7 +437,7 @@ bool library::reset_user_password(user* now_user){
 bool library::list_users(){
 	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return false;}
 	for (map<string, user* >::iterator it=user_link.begin(); it!=user_link.end(); it++)
-		cout<<it->first<<endl;
+		cout<<" "<<it->first<<endl;
 	return true;
 }
 

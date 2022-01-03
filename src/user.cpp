@@ -11,12 +11,14 @@ user::user(const string &id){
 	this->id = id;
 	this->passwd = "123456";
 	this->group = 0;
+	this->books.clear();
 }
 
 user::user(const string &id, const string &passwd, int group){
 	this->id = id;
 	this->passwd = passwd;
 	this->group = group;
+	this->books.clear();
 }
 
 int user::get_group(){
