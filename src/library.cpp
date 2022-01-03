@@ -84,58 +84,15 @@ library::library(const string& s){
 	}
 	getline(fin, tmp); wash(tmp);
 	while (tmp != "[users]" && !fin.eof()){
+		string name, isbn, authors, cates, num;
 		stringstream ss(tmp);
-
-		string name, isbn;
-		vector<string> vec; vec.clear();
-		string cate1,cate2,cate3;
-
-		string authors;
-		string cates;
-
 		getline(ss, name, ' ');
 		getline(ss, isbn, ' ');
 		getline(ss, authors, ' ');
 		getline(ss, cates, ' ');
-
-		// 处理作者
-		// 一个作者集合字符串分为两种情况：翻译书和国内书
-		// 对于翻译书，考虑 作者,作者,作者;译者,译者 的格式，末尾可能有 译 等译 [等]译 等后缀
-		// 对于国内书，考虑 作者,作者,作者 的格式
-		ss = stringstream(authors);
-		if (authors.find(';') != string::npos){ // 分为国外作者和国内译者
-			string writers,transers;
-			getline(ss, writers, ';');
-			getline(ss, transers, '@');
-
-			string now_name;
-			ss = stringstream(writers);
-			while (!ss.eof() && getline(ss, now_name, ',')) vec.push_back(now_name);
-			ss = stringstream(transers);
-			while (!ss.eof() && getline(ss, now_name, ',')) vec.push_back(now_name);
-
-			// 处理乱七八糟的格式问题
-			string& last_name = vec[(int)vec.size()-1];
-			string tmp_chinese = "等译";
-			string_erase(last_name, tmp_chinese);
-			tmp_chinese = "[等]译";
-			string_erase(last_name, tmp_chinese);
-			tmp_chinese = "译";
-			string_erase(last_name, tmp_chinese);
-		} else { // 只有作者没有译者
-			string now_name;
-			while (getline(ss, now_name, ',')) vec.push_back(now_name);
-		}
-
-		// 处理分类
-		// 格式比较混乱
-		// 考虑第一个大写字母为一级分类，之后到 / 符号之前为二级分类，之后为三级分类
-		cate1 = cates[0]; cates.erase(0, 1);
-		ss = stringstream(cates);
-		getline(ss, cate2, '/');
-		getline(ss, cate3, '@');
-
-		add_book(book(name, isbn, vec, cate1, cate2, cate3));
+		getline(ss, num, ' ');
+		// stoi(str) 将 str 转换成 int
+		add_book(name, isbn, authors, cates, stoi(num));
 
 		getline(fin, tmp); wash(tmp);
 	}
@@ -215,23 +172,19 @@ library::~library(){
 			fout<<vec[i];
 			if (i!=(int)vec.size()-1) fout<<",";
 		}
-		fout << " " << it->second->get_cate1() << it->second->get_cate2() << "/" << it->second->get_cate3() << endl;
+		fout << " " << it->second->get_cate1() << it->second->get_cate2() << "/" << it->second->get_cate3() << it->second->get_number() << endl;
 	}
 
 	cout<<"Saving users... "<<endl;
 	fout<<"[users]"<<endl;
-	// cout<<"[users]"<<endl;
 	for (map<string, user*>::iterator it=user_link.begin(); it!=user_link.end(); it++){
 		fout << it->first << " " << it->second->get_passwd() << " " << it->second->get_group() << " ";
-		// cout << it->first << " " << it->second->get_passwd() << " " << it->second->get_group() << " ";
 		vector<book*>& vec = *(it->second->get_books());
 		for (int i=0; i<(int)vec.size(); i++){
 			fout << vec[i]->get_isbn();
-			// cout << vec[i]->get_isbn();
 			if (i != (int)vec.size()-1) fout<<",";
 		}
 		fout<<endl;
-		// cout<<endl;
 	}
 
 	cout<<"Saving records... "<<endl;
@@ -324,14 +277,11 @@ bool library::borrow_book(book* now_book){
 bool library::return_book(book* now_book){
 	if (now_book == NULL) {cout<<"ERROR: Empty ptr."<<endl; return false;}
 	if (this_user == NULL) {cout<<"ERROR: Please log in first."<<endl; return false;}
-	if (now_book->is_inlib()){
-		cout<<"ERROR: Book not borrowed."<<endl;
-		return false;
-	}
+	bool flag = false;
 	vector<book*>& vec = *(this_user->get_books());
 	for (vb_it it=vec.begin(); it!=vec.end(); it++)
-		if ((*it) == now_book) {vec.erase(it); now_book->returnn(); break;}
-	if (!now_book->is_inlib()){
+		if ((*it) == now_book) {vec.erase(it); now_book->returnn(); flag=true; break;}
+	if (!flag){
 		cout<<"ERROR: Book not borrowed by you."<<endl;
 		return false;
 	} else records_return.push_back(make_pair(this_user, now_book));
@@ -345,6 +295,66 @@ bool library::return_book(book* now_book){
 
 #define vs_it vector<string>::iterator
 #define vb_it vector<book*>::iterator
+
+book* library::add_book(const string& the_name, const string& the_isbn, const string& authors, const string& cates, int the_number){
+	if (book_isbn_link[the_isbn]){
+		book* now_book = book_isbn_link[the_isbn];
+		now_book->add(the_number);
+		return now_book;
+	}
+
+	stringstream ss;
+	vector<string> author; author.clear(); // 作者的列表
+    string cate1,cate2,cate3; // 三级分类
+
+	// 处理作者
+	// 一个作者集合字符串分为两种情况：翻译书和国内书
+	// 对于翻译书，考虑 作者,作者,作者;译者,译者 的格式
+	// 对于国内书，考虑 作者,作者,作者 的格式
+	ss = stringstream(authors);
+	if (authors.find(';') != string::npos){ // 分为国外作者和国内译者
+		string writers,transers;
+		getline(ss, writers, ';');
+		getline(ss, transers, '@');
+
+		string now_name;
+		ss = stringstream(writers);
+		while (!ss.eof() && getline(ss, now_name, ',')) author.push_back(now_name);
+		ss = stringstream(transers);
+		while (!ss.eof() && getline(ss, now_name, ',')) author.push_back(now_name);
+
+		// 处理乱七八糟的格式问题
+		// 末尾可能有 译 等译 [等]译 等后缀
+		string tmp_chinese;
+		string& last_name = author[(int)author.size()-1];
+		tmp_chinese = "等译";
+		string_erase(last_name, tmp_chinese);
+		tmp_chinese = "[等]译";
+		string_erase(last_name, tmp_chinese);
+		tmp_chinese = "译";
+		string_erase(last_name, tmp_chinese);
+		// 开头可能有 作者 编者 等前缀
+		string& first_name = author[0];
+		tmp_chinese = "作者";
+		string_erase(first_name, tmp_chinese);
+		tmp_chinese = "编者";
+		string_erase(first_name, tmp_chinese);
+	} else { // 只有作者没有译者
+		string now_name;
+		while (getline(ss, now_name, ',')) author.push_back(now_name);
+	}
+
+	// 处理分类
+	// 格式比较混乱
+	// 考虑第一个大写字母为一级分类，之后到 / 符号之前为二级分类，之后为三级分类
+	string n_cates = cates;
+	cate1 = cates[0]; n_cates.erase(0, 1);
+	ss = stringstream(n_cates);
+	getline(ss, cate2, '/');
+	getline(ss, cate3, '@');
+
+	return add_book(book(the_name, the_isbn, author, cate1, cate2, cate3, the_number));
+}
 
 book* library::add_book(book now_book_obj){
 	if (!loading && this_user->get_group()) {cout<<"ERROR: Access denied."<<endl; return NULL;}

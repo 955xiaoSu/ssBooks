@@ -236,32 +236,25 @@ void opt_logout(){
 
 void opt_add_book(){
 	if (!check_login() || !check_admin()) return;
-	string name,isbn;
-    vector<string> author; author.clear(); // 作者的列表
-    string cate1,cate2,cate3; // 三级分类
-	string authors,cates,now_tmp;
-	string confirm;
+	string name, isbn, authors, cates, number, confirm;
+
 	cout<<" > Please input the name of the book: "<<endl;
 	who(); getline(cin, name);
 	cout<<" > Please input the ISBN of the book: "<<endl;
 	who(); getline(cin, isbn);
-
 	cout<<" > Please input the author(s) of the book, seperate by ',': "<<endl;
 	who(); getline(cin, authors);
-	stringstream ss(authors);
-	while (!ss.eof() && getline(ss, now_tmp, ',')) author.push_back(now_tmp);
-
 	cout<<" > Please input hte category of the book, formatted: "<<endl;
 	who(); getline(cin, cates);
-	cate1 = cates[0]; cates.erase(0, 1);
-	ss = stringstream(cates);
-	getline(ss, cate2, '/');
-	getline(ss, cate3, '@');
-
+	cout<<" > Please input the total number you want to add: "<<endl;
+	who(); getline(cin, number);
 	cout<<" > Is that all right? Enter 'yes' to confirm, or else exit. "<<endl;
 	who(); getline(cin, confirm);
-	if (confirm == "yes") s->add_book(book(name, isbn, author, cate1, cate2, cate3)),cout<<"Success! New book added successfully. ";
-	else cout<<"Not confirmed. Exit. "<<endl;
+
+	if (confirm == "yes"){
+		if (s->add_book(name,isbn,authors,cates,stoi(number))) cout<<"Success! New book added successfully. ";
+		else cout<<"Failed."<<endl;
+	} else cout<<"Not confirmed. Exit. "<<endl;
 }
 
 void opt_delete_book(){

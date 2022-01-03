@@ -77,7 +77,11 @@ class library{
 		// 图书管理部分
 		// 用户组：管理员
 
-		// 增加图书
+		// 增加图书，原生输入数据的调用形式
+		// 参数：书名，ISBN，作者字符串，类型字符串，数量
+		// 返回：指向书的指针，失败返回 NULL
+		book* add_book(const string&, const string&, const string&, const string&, int);
+		// 增加图书，传入对象实例的调用形式
 		// 参数：要增加的图书对象
 		// 返回：指向书的指针，失败返回 NULL
 		book* add_book(book);
