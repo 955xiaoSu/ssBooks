@@ -101,7 +101,8 @@ library::library(const string& s){
 	if (!fin.eof() && tmp=="[users]"){
 		getline(fin, tmp); wash(tmp);
 		while (tmp!="[records]"){
-			if (tmp == "\n") break;
+			// 最后一行如果是空行， 会 getline 进一个空字符串而不是换行符！
+			if (tmp == "") break;
 			stringstream ss(tmp);
 			string id, passwd, group, user_books;
 			getline(ss, id, ' ');
@@ -134,7 +135,7 @@ library::library(const string& s){
 		getline(fin, tmp); wash(tmp);
 		bool flag=false;
 		while (true){
-			if (tmp == "\n") break;
+			if (tmp == "") break;
 			if (tmp == "[records_return]") {flag=true;if (fin.eof()) break;getline(fin, tmp);wash(tmp);continue;}
 			stringstream ss(tmp);
 			string user,isbn;
