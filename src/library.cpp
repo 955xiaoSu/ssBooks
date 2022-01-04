@@ -176,7 +176,7 @@ library::~library(){
 			fout<<vec[i];
 			if (i!=(int)vec.size()-1) fout<<",";
 		}
-		fout << " " << it->second->get_cate1() << it->second->get_cate2() << "/" << it->second->get_cate3() << it->second->get_number() << endl;
+		fout << " " << it->second->get_cate1() << it->second->get_cate2() << "/" << it->second->get_cate3() << " " << it->second->get_number() << endl;
 	}
 
 	cout<<"Saving users... "<<endl;
