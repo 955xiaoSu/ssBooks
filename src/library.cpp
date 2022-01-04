@@ -337,11 +337,13 @@ book* library::add_book(const string& the_name, const string& the_isbn, const st
 		string_erase(last_name, tmp_chinese);
 		tmp_chinese = "译";
 		string_erase(last_name, tmp_chinese);
-		// 开头可能有 作者 编者 等前缀
+		// 开头可能有 作者 编者 主编 等前缀
 		string& first_name = author[0];
 		tmp_chinese = "作者";
 		string_erase(first_name, tmp_chinese);
 		tmp_chinese = "编者";
+		string_erase(first_name, tmp_chinese);
+		tmp_chinese = "主编";
 		string_erase(first_name, tmp_chinese);
 	} else { // 只有作者没有译者
 		string now_name;
