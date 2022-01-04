@@ -100,7 +100,7 @@ library::library(const string& s){
 	cout<<"Loading users..."<<endl;
 	if (!fin.eof() && tmp=="[users]"){
 		getline(fin, tmp); wash(tmp);
-		while (tmp!="[records]" && !fin.eof()){
+		while (tmp!="[records]"){
 			if (tmp == "\n") break;
 			stringstream ss(tmp);
 			string id, passwd, group, user_books;
@@ -112,16 +112,19 @@ library::library(const string& s){
 
 			// 处理这个用户借阅的书籍
 			getline(ss, user_books, '@');
-			if (user_books == "" || user_books == " "){getline(fin, tmp);wash(tmp);continue;}
-			ss = stringstream(user_books);
-			while (!ss.eof()){
-				string now_book_isbn;
-				getline(ss, now_book_isbn, ',');
-				book* now_book = search_book_by_isbn(now_book_isbn);
-				now_book->borrow();
-				now_user->get_books()->push_back(now_book);
+			if (user_books != "" && user_books != " "){
+				ss = stringstream(user_books);
+				while (!ss.eof()){
+					string now_book_isbn;
+					getline(ss, now_book_isbn, ',');
+					book* now_book = search_book_by_isbn(now_book_isbn);
+					now_book->borrow();
+					now_user->get_books()->push_back(now_book);
+				}
 			}
 
+			// 文件尾 EOF 一定要在这里判断！！！
+			if (fin.eof()) break;
 			getline(fin, tmp); wash(tmp);
 		}
 	}
@@ -130,9 +133,9 @@ library::library(const string& s){
 	if (!fin.eof() && tmp=="[records]"){
 		getline(fin, tmp); wash(tmp);
 		bool flag=false;
-		while (!fin.eof()){
-			if (tmp == "[records_return]") {flag=true;getline(fin, tmp);wash(tmp);continue;}
+		while (true){
 			if (tmp == "\n") break;
+			if (tmp == "[records_return]") {flag=true;if (fin.eof()) break;getline(fin, tmp);wash(tmp);continue;}
 			stringstream ss(tmp);
 			string user,isbn;
 			getline(ss, user, ' ');
@@ -140,6 +143,7 @@ library::library(const string& s){
 			if (!flag) records_borrow.push_back(make_pair(search_user(user), search_book_by_isbn(isbn)));
 			else records_return.push_back(make_pair(search_user(user), search_book_by_isbn(isbn)));
 
+			if (fin.eof()) break;
 			getline(fin, tmp); wash(tmp);
 		}
 	}
