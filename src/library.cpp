@@ -385,8 +385,11 @@ bool library::del_book(book* now_book){
 	vector<string>& vec_a = *(now_book->get_authors());
 	for (vs_it it=vec_a.begin(); it!=vec_a.end(); it++){
 		vector<book*>& vec = author_link[*it];
-		for (vb_it itt=vec.begin(); itt!=vec.end(); itt++)
-			if ((*itt)->get_name() == now_book->get_name()) vec.erase(itt);
+		for (vb_it itt=vec.begin(); itt!=vec.end(); itt++){
+			cout<<"!"<<*itt<<" ";
+			// vecotr 的 iterator 在删除元素之后会失效！所以这里 erase 之后必须要 break
+			if ((*itt) == now_book){vec.erase(itt);break;}
+		}
 	}
 	delete now_book;
 	return true;
